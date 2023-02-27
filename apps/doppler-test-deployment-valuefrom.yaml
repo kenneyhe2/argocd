@@ -34,8 +34,8 @@ spec:
                   key: DOPPLER_TEST_SECRET # The name of the key in the Kubernetes secret
           resources:
             requests:
-              memory: '10Mi'
+              memory: '40Mi'
               cpu: '10m'
             limits:
-              memory: '20Mi'
+              memory: '50Mi'
               cpu: '20m'
