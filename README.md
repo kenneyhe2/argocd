@@ -62,6 +62,7 @@ docker push kenneyhe/traefik:latest
 
 ### STEPS TO ADD RASPI
     ```
+    kubectl port-forward svc/argocd-server -n argocd 8080:443
     argocd login localhost:8080 --insecure --username admin --password `kubectl -n argocd get secrets argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo`
 
     argocd cluster add k3s-rpi --kubeconfig ~/.kube/raspimaster -y
@@ -70,10 +71,25 @@ docker push kenneyhe/traefik:latest
     # create project ie:
     argocd proj list
     argocd proj create raspi -s https://github.com/kenneyhe2/argocd.git -d https://192.168.86.26:6443,apps
-    # create application to sync up ie:
+    # create application, private repository already has secrets to sync up ie:
     argocd app list
+    argocd app create tests --repo https://github.com/kenneyhe2/argocd.git --path apps --dest-namespace apps --dest-server https://192.168.86.26:6443 --project raspi --self-heal --sync-option Prune=true --sync-policy auto 
+    argocd app create raspi-pihole2 --repo git@github.com:kenneyhe2/argocd-projects.git  --path apps/pihole-kubernetes-chart/charts --dest-namespace apps --dest-server https://192.168.86.26:6443 --project raspi-dev  --revision feature-apps-privatedocker-github-actions --sync-policy auto
+    argocd app create pihole --repo git@github.com:kenneyhe2/argocd-projects.git  --path apps/pihole-kubernetes-chart/charts --dest-namespace apps --dest-server  https://kubernetes.default.svc --project default  --revision feature-apps-privatedocker-github-actions --sync-policy auto
+    argocd app sync pihole --prune
 
-    argocd app create nginx2 --repo https://github.com/kenneyhe2/argocd.git --path app --dest-namespace apps --dest-server https://192.168.86.26:6443 --project raspi
+    # need to enable force namespace creation
     # must create namespace apps in infrastructure code
     # delete argocd app delete nginx3 -y
+
+    # issues to address.. need a cronjob to scrub all unknown and stuck pods for SRE or get alerts
+    #
+    # kr='kubectl --kubeconfig ~/.kube/raspimaster2'
+    # for p in $(kr -n kube-system get pods | grep Terminating | awk '{print $1}'); do kr -n kube-system  delete pod $p --grace-period=0 --force;done
+    ```
+
+### Modules to create individual apps with own branch
+    ```
+    argocd proj create raspi-dev-doppler -s git@github.com:kenneyhe2/argocd-projects.git  -d https://192.168.86.26:6443,doppler-operator-system
+    argocd app create raspi-doppler --repo git@github.com:kenneyhe2/argocd-projects.git  --path apps/doppler-kubernetes-operator --dest-namespace doppler-operator-system --dest-server https://192.168.86.26:6443 --project raspi-dev-doppler  --revision feat-doppler-crd  --sync-policy auto
     ```
