@@ -92,6 +92,11 @@ docker push kenneyhe/traefik:latest
 
 ### Modules to create individual apps with own branch
     ```
+    # if not using github private runner
+    kr create secret generic doppler-token-secret \
+      --namespace doppler-operator-system \
+      --from-literal=serviceToken=$(doppler -p github -c dev configs tokens create doppler-kubernetes-operator --plain --copy)
+
     argocd proj create raspi-dev-doppler -s git@github.com:kenneyhe2/argocd-projects.git  -d https://192.168.86.26:6443,doppler-operator-system
     argocd app create raspi-doppler --repo git@github.com:kenneyhe2/argocd-projects.git  --path apps/doppler-kubernetes-operator --dest-namespace doppler-operator-system --dest-server https://192.168.86.26:6443 --project raspi-dev-doppler  --revision feat-doppler-crd  --sync-policy auto
     ```
