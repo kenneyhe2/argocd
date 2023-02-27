@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doppler-test-deployment-valuefrom
+  annotations:
+    secrets.doppler.com/reload: 'true'
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: doppler-test
+  template:
+    metadata:
+      labels:
+        app: doppler-test
+    spec:
+      containers:
+        - name: doppler-test
+          image: alpine
+          command:
+            - /bin/sh
+            - -c
+            # Print all non-Kubernetes environment variables
+            - apk add --no-cache tini > /dev/null 2>&1 &&
+              echo "### This is a simple deployment running with this env:" &&
+              printenv | grep -v KUBERNETES_ &&
+              tini -s tail -f /dev/null
+          imagePullPolicy: Always
+          env:
+            - name: DOPPLER_CONFIG # The name of the environment variable exposed in the container
+              valueFrom:
+                secretKeyRef:
+                  name: doppler-test-secret # Kubernetes secret name
+                  key: DOPPLER_CONFIG # The name of the key in the Kubernetes secret
+          resources:
+            requests:
+              memory: '50Mi'
+              cpu: '50m'
+            limits:
+              memory: '50Mi'
+              cpu: '50m'
