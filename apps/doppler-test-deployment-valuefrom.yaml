@@ -27,15 +27,15 @@ spec:
               tini -s tail -f /dev/null
           imagePullPolicy: Always
           env:
-            - name: DOPPLER_CONFIG # The name of the environment variable exposed in the container
+            - name: DOPPLER_SECRET # The name of the environment variable exposed in the container
               valueFrom:
                 secretKeyRef:
                   name: doppler-test-secret # Kubernetes secret name
-                  key: DOPPLER_CONFIG # The name of the key in the Kubernetes secret
+                  key: DOPPLER_TEST_SECRET # The name of the key in the Kubernetes secret
           resources:
             requests:
-              memory: '50Mi'
-              cpu: '50m'
+              memory: '10Mi'
+              cpu: '10m'
             limits:
-              memory: '50Mi'
-              cpu: '50m'
+              memory: '20Mi'
+              cpu: '20m'
