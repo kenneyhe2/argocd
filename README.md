@@ -62,21 +62,12 @@ docker push kenneyhe/traefik:latest
 
 ### STEPS TO ADD RASPI
     ```
+    # edit playbooks/k3s-main.yml for ip addr all in https://github.com/HI-INTL/argocd-projects/tree/main
+    ansible-playbook -vvv -e 'ansible_python_interpreter="/usr/bin/env python"' playbook/main.yml
+
     kubectl port-forward svc/argocd-server -n argocd 8080:443
     argocd login localhost:8080 --insecure --username admin --password `kubectl -n argocd get secrets argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo`
-
-    argocd cluster add k3s-rpi --kubeconfig ~/.kube/raspimaster -y
-    # remove if UI is buggy
-    # argocd cluster rm k3d-staging-apps-cluster -y
-    # create project ie:
-    argocd proj list
-    argocd proj create raspi -s https://github.com/kenneyhe2/argocd.git -d https://192.168.86.26:6443,apps
-    # do not use prune=true to increase stability
-    # create application, private repository already has secrets to sync up ie:
-    argocd app list
-    argocd app create tests --repo https://github.com/kenneyhe2/argocd.git --path apps --dest-namespace apps --dest-server https://192.168.86.26:6443 --project raspi --self-heal --sync-option Prune=true --sync-policy auto
-    argocd app create raspi-pihole2 --repo git@github.com:kenneyhe2/argocd-projects.git --path apps/pihole-kubernetes-chart/chart --dest-namespace apps --dest-server https://192.168.86.26:6443 --project raspi-dev  --revision feature-apps-privatedocker-github-actions --sync-policy auto
-
+    
     # if out of sync as redundancy
     argocd app sync pihole --prune
 
