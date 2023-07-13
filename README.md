@@ -43,8 +43,6 @@ kubectl patch deployment istiod -n istio-system --type merge --patch "$(echo '{
   }
 }')"
 
-
-kubectl patch -n istio-system deploy istiod -p '{"spec": {"containers": {"resources": {"requests": {"Memory":"2Gi"}}}}}'
 istioctl version
 istioctl profile dump default
 istioctl install --set profile=default -y --readiness-timeout 10m0s
