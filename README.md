@@ -10,15 +10,105 @@ open /Applications/Docker.app/Contents/MacOS/Docker\ Desktop.app
 k3d cluster start argocd-cluster
 ```
 
-## STEPS TO SETUP K3S FOR UNITTESTING AND ARGOCD SERVER
+## STEPS TO SETUP K3S FOR UNITTESTING AND ARGOCD SERVER.. only >4.0.0 will work. ref: https://brettmostert.medium.com/k3d-kubernetes-istio-service-mesh-286a7ba3a64f
 ```
-cat > cluster-config << EOF
-apiVersion: k3d.io/v1alpha2
-kind: Simple
-servers: 1
-agents: 2
+
+curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v4.4.8 sh
+
+k3d cluster create argocd-cluster --servers 1 --agents 1 --port 9080:80@loadbalancer --port 9443:443@loadbalancer --api-port 6443 --k3s-server-arg '--no-deploy=traefik'
+
+export ISTIO_VERSION=1.11.5
+export PATH="/Users/kenneyhe/ArgoCD/public/istio-1.11.5/bin:$PATH"
+curl -L https://istio.io/downloadIstio | sh -
+# istioctl x uninstall --purge -y
+# change from 2G to 1G k3s kubectl -n istio-system edit deploy istiod
+kubectl patch deployment istiod -n istio-system --type merge --patch "$(echo '{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "image": "docker.io/istio/pilot:1.11.5",
+            "name": "discovery",
+            "resources": {
+              "requests": {
+                "cpu": "500m",
+                "memory": "1Gi"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}')"
+
+
+kubectl patch -n istio-system deploy istiod -p '{"spec": {"containers": {"resources": {"requests": {"Memory":"2Gi"}}}}}'
+istioctl version
+istioctl profile dump default
+istioctl install --set profile=default -y --readiness-timeout 10m0s
+kubectl label namespace default istio-injection=enabled
+cat > deployment.yaml << EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echoserver-v1
+  labels:
+    app: echoserver
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echoserver
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: echoserver
+        version: v1
+    spec:
+      containers:
+      - name: echoserver
+        image: gcr.io/google_containers/echoserver:1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
 EOF
-k3d cluster create argocd-cluster --config ./cluster-config.yaml
+
+# TBD
+cat > deployment1.yaml << EOF
+EOF
+cat > service.yaml << EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: echoserver
+  labels:
+    app: echoserver
+    service: echoserver
+spec:
+  selector:
+    app: echoserver
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+EOF
+
+#TBD
+cat > service1.yaml << EOF
+EOF
+
+# TBD
+cat > ingress.yaml << EOF
+EOF
+kubectl apply -f ./deployment.yaml
+kubectl apply -f ./service.yaml
+kubectl apply -f ./deployment1.yaml
+kubectl apply -f ./service1.yaml
+kubectl apply -f ./ingress.yaml
 brew install kubectl
 kubectl cluster-info
 kubectl get ns
@@ -38,7 +128,7 @@ kubectl create svc -n apps  nodeport nginx --tcp=80:80 -o yaml --dry-run=client 
 #cat d*yaml | kubectl create -f  -
 #cat s*yaml | kubectl create -f  -
 ```
-
+### delete k3d cluster delete --all
 ### ... APPS K3S
 ```
 cat > cluster-config-apps << EOF
